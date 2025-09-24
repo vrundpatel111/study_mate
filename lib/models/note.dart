@@ -34,6 +34,15 @@ class Note extends HiveObject {
   @HiveField(9)
   String? category;
 
+  @HiveField(10)
+  bool isShared;
+
+  @HiveField(11)
+  String? sharedNoteId; // Reference to SharedNote in Firestore
+
+  @HiveField(12)
+  DateTime? sharedAt;
+
   Note({
     required this.id,
     required this.title,
@@ -45,6 +54,9 @@ class Note extends HiveObject {
     this.imagePath,
     this.isFavorite = false,
     this.category,
+    this.isShared = false,
+    this.sharedNoteId,
+    this.sharedAt,
   });
 
   // Get word count for the note content
@@ -68,6 +80,9 @@ class Note extends HiveObject {
     String? imagePath,
     bool? isFavorite,
     String? category,
+    bool? isShared,
+    String? sharedNoteId,
+    DateTime? sharedAt,
   }) {
     return Note(
       id: this.id,
@@ -80,6 +95,9 @@ class Note extends HiveObject {
       imagePath: imagePath ?? this.imagePath,
       isFavorite: isFavorite ?? this.isFavorite,
       category: category ?? this.category,
+      isShared: isShared ?? this.isShared,
+      sharedNoteId: sharedNoteId ?? this.sharedNoteId,
+      sharedAt: sharedAt ?? this.sharedAt,
     );
   }
 

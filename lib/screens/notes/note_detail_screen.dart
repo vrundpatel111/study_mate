@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:studymate/models/note.dart';
 import 'package:studymate/services/note_service.dart';
+import 'package:studymate/services/shared_note_service.dart';
+import 'package:studymate/services/auth_service.dart';
 import 'package:intl/intl.dart';
 
 class NoteDetailScreen extends StatefulWidget {
@@ -15,6 +17,8 @@ class NoteDetailScreen extends StatefulWidget {
 class _NoteDetailScreenState extends State<NoteDetailScreen> {
   late Note _note;
   final NoteService _noteService = NoteService();
+  final SharedNoteService _sharedNoteService = SharedNoteService();
+  final AuthService _authService = AuthService();
   bool _isEditing = false;
   bool _isLoading = false;
   
@@ -126,6 +130,118 @@ class _NoteDetailScreenState extends State<NoteDetailScreen> {
     }
   }
 
+  Future<void> _shareNote() async {
+    final user = _authService.currentUser;
+    if (user == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Please log in to share notes'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
+
+    // Show sharing options dialog
+    final shouldShare = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Share Note'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Share "${_note.title}" with other students?'),
+            SizedBox(height: 16),
+            Text(
+              'Your note will be visible to all users and they can like and review it.',
+              style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+            ),
+            if (_note.isShared) ...[
+              SizedBox(height: 16),
+              Container(
+                padding: EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.blue.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.info, color: Colors.blue, size: 20),
+                    SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'This note is already shared',
+                        style: TextStyle(color: Colors.blue[800]),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: Text(_note.isShared ? 'View Shared' : 'Share'),
+          ),
+        ],
+      ),
+    );
+
+    if (shouldShare == true) {
+      if (_note.isShared) {
+        // Note is already shared, show shared notes or navigate to shared version
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Note is already shared! Check the Shared Notes section.'),
+            backgroundColor: Colors.blue,
+          ),
+        );
+        return;
+      }
+
+      setState(() => _isLoading = true);
+
+      try {
+        final sharedNoteId = await _sharedNoteService.shareNote(_note);
+        
+        // Update local note to mark as shared
+        final updatedNote = _note.copyWith(
+          isShared: true,
+          sharedNoteId: sharedNoteId,
+          sharedAt: DateTime.now(),
+        );
+        await _noteService.updateNote(updatedNote);
+        
+        setState(() {
+          _note = updatedNote;
+          _isLoading = false;
+        });
+        
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Note shared successfully!'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      } catch (e) {
+        setState(() => _isLoading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error sharing note: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
   Future<void> _deleteNote() async {
     final confirmed = await showDialog<bool>(
       context: context,
@@ -185,6 +301,13 @@ class _NoteDetailScreenState extends State<NoteDetailScreen> {
             IconButton(
               onPressed: () => setState(() => _isEditing = true),
               icon: Icon(Icons.edit),
+            ),
+            IconButton(
+              onPressed: _shareNote,
+              icon: Icon(
+                _note.isShared ? Icons.share : Icons.share_outlined,
+                color: _note.isShared ? Colors.blue : Colors.white,
+              ),
             ),
             PopupMenuButton(
               itemBuilder: (context) => [

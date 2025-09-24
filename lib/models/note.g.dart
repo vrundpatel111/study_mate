@@ -27,13 +27,16 @@ class NoteAdapter extends TypeAdapter<Note> {
       imagePath: fields[7] as String?,
       isFavorite: fields[8] as bool,
       category: fields[9] as String?,
+      isShared: fields[10] as bool,
+      sharedNoteId: fields[11] as String?,
+      sharedAt: fields[12] as DateTime?,
     );
   }
 
   @override
   void write(BinaryWriter writer, Note obj) {
     writer
-      ..writeByte(10)
+      ..writeByte(13)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -53,7 +56,13 @@ class NoteAdapter extends TypeAdapter<Note> {
       ..writeByte(8)
       ..write(obj.isFavorite)
       ..writeByte(9)
-      ..write(obj.category);
+      ..write(obj.category)
+      ..writeByte(10)
+      ..write(obj.isShared)
+      ..writeByte(11)
+      ..write(obj.sharedNoteId)
+      ..writeByte(12)
+      ..write(obj.sharedAt);
   }
 
   @override
